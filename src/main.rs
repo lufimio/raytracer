@@ -7,8 +7,13 @@ mod texture;
 use crate::{
     camera::Camera,
     geometry::{Color, Point3, Vec3},
-    hittable::{HittableList, bvh::BVHNode, quad::Quad, sphere::Sphere},
-    material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal},
+    hittable::{
+        HittableList,
+        bvh::BVHNode,
+        quad::{Quad, make_box},
+        sphere::Sphere,
+    },
+    material::{dielectric::Dielectric, lambertian::Lambertian, light::DiffuseLight, metal::Metal},
     texture::{Texture, checker::Checker, image::Image},
 };
 use rand::{random, random_range};
@@ -89,16 +94,17 @@ fn setup_scattered_balls() {
     let world = BVHNode::from_hittable_list(world);
 
     let camera = Camera::new(
-        16. / 9.,                 // aspect ratio
-        400,                      // image width
-        50,                       // samples per pixel
-        50,                       // max depth
-        20.0,                     // fov
-        Point3::new(13., 2., 3.), // look from
-        Point3::new(0., 0., 0.),  // look at
-        Vec3::new(0., 1., 0.),    // camera up
-        0.6,                      // defocus angle
-        10.0,                     // focus distance
+        16. / 9.,                  // aspect ratio
+        400,                       // image width
+        50,                        // samples per pixel
+        50,                        // max depth
+        20.0,                      // fov
+        Point3::new(13., 2., 3.),  // look from
+        Point3::new(0., 0., 0.),   // look at
+        Vec3::new(0., 1., 0.),     // camera up
+        Color::new(0.7, 0.8, 1.0), // background color
+        0.6,                       // defocus angle
+        10.0,                      // focus distance
     );
 
     camera.render(&world, "output/render.png");
@@ -152,16 +158,17 @@ fn setup_quads() {
     world.add(Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.25, earth_surface));
 
     let camera = Camera::new(
-        1.0,                     // aspect ratio
-        1200,                    // image width
-        100,                     // samples per pixel
-        50,                      // max depth
-        70.0,                    // fov
-        Point3::new(0., 0., 9.), // look from
-        Point3::new(0., 0., 0.), // look at
-        Vec3::new(0., 1., 0.),   // camera up
-        0.0,                     // defocus angle
-        10.0,                    // focus distance
+        1.0,                       // aspect ratio
+        600,                       // image width
+        100,                       // samples per pixel
+        50,                        // max depth
+        70.0,                      // fov
+        Point3::new(0., 0., 9.),   // look from
+        Point3::new(0., 0., 0.),   // look at
+        Vec3::new(0., 1., 0.),     // camera up
+        Color::new(0.7, 0.8, 1.0), // background color
+        0.0,                       // defocus angle
+        10.0,                      // focus distance
     );
 
     camera.render(&world, "output/render.png");
@@ -181,6 +188,7 @@ fn setup_earth() {
         Point3::new(-4., 12., 5.), // look from
         Point3::new(0., 0., 0.),   // look at
         Vec3::new(0., 1., 0.),     // camera up
+        Color::new(0.7, 0.8, 1.0), // background color
         0.0,                       // defocus angle
         10.0,                      // focus distance
     );
@@ -188,11 +196,91 @@ fn setup_earth() {
     camera.render(&globe, "output/render.png");
 }
 
+fn setup_cornell_box() {
+    let mut world = HittableList::empty();
+
+    let red = Arc::new(Lambertian::new(Arc::new(Color::new(0.65, 0.05, 0.05).into())).into());
+    let white = Arc::new(Lambertian::new(Arc::new(Color::new(0.73, 0.73, 0.73).into())).into());
+    let green = Arc::new(Lambertian::new(Arc::new(Color::new(0.12, 0.45, 0.15).into())).into());
+    let light = Arc::new(DiffuseLight::new(Arc::new(Color::new(15.0, 15.0, 15.0).into())).into());
+
+    world.add(Quad::new(
+        Point3::new(555., 0., 0.),
+        Vec3::new(0., 555., 0.),
+        Vec3::new(0., 0., 555.),
+        Arc::clone(&green),
+    ));
+
+    world.add(Quad::new(
+        Point3::new(0., 0., 0.),
+        Vec3::new(0., 555., 0.),
+        Vec3::new(0., 0., 555.),
+        Arc::clone(&red),
+    ));
+
+    world.add(Quad::new(
+        Point3::new(343., 554., 332.),
+        Vec3::new(-130., 0., 0.),
+        Vec3::new(0., 0., -105.),
+        Arc::clone(&light),
+    ));
+
+    world.add(Quad::new(
+        Point3::new(0., 0., 0.),
+        Vec3::new(555., 0., 0.),
+        Vec3::new(0., 0., 555.),
+        Arc::clone(&white),
+    ));
+
+    world.add(Quad::new(
+        Point3::new(555., 555., 555.),
+        Vec3::new(-555., 0., 0.),
+        Vec3::new(0., 0., -555.),
+        Arc::clone(&white),
+    ));
+
+    world.add(Quad::new(
+        Point3::new(0., 0., 555.),
+        Vec3::new(555., 0., 0.),
+        Vec3::new(0., 555., 0.),
+        Arc::clone(&white),
+    ));
+
+    world.add(make_box(
+        Point3::new(130., 0., 65.),
+        Point3::new(295., 165., 230.),
+        Arc::clone(&white),
+    ));
+
+    world.add(make_box(
+        Point3::new(265., 0., 295.),
+        Point3::new(430., 330., 460.),
+        Arc::clone(&white),
+    ));
+
+    let camera = Camera::new(
+        1.0,                            // aspect ratio
+        600,                            // image width
+        200,                            // samples per pixel
+        50,                             // max depth
+        40.0,                           // fov
+        Point3::new(278., 278., -800.), // look from
+        Point3::new(278., 278., 0.),    // look at
+        Vec3::new(0., 1., 0.),          // camera up
+        Color::new(0.0, 0.0, 0.0),      // background color
+        0.0,                            // defocus angle
+        10.0,                           // focus distance
+    );
+
+    camera.render(&world, "output/render.png");
+}
+
 fn main() {
-    match 2 {
+    match 4 {
         1 => setup_scattered_balls(),
         2 => setup_quads(),
         3 => setup_earth(),
+        4 => setup_cornell_box(),
         _ => (),
     }
 }

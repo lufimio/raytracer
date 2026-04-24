@@ -1,10 +1,10 @@
-use image::{DynamicImage, ImageBuffer, ImageResult, Rgb};
-use indicatif::{ProgressBar, ProgressStyle};
 use crate::{
-    geometry::{Color, Interval, Point3, Ray, Vec3, random_in_unit_disk, color_to_rgb},
+    geometry::{Color, Interval, Point3, Ray, Vec3, color_to_rgb, random_in_unit_disk},
     hittable::Hittable,
     material::Scatter,
 };
+use image::{DynamicImage, ImageBuffer, ImageResult, Rgb};
+use indicatif::{ProgressBar, ProgressStyle};
 
 pub struct Camera {
     pub aspect_ratio: f32,
@@ -12,6 +12,7 @@ pub struct Camera {
     pub lookfrom: Point3,
     pub lookat: Point3,
     pub cameraup: Vec3,
+    pub background: Color,
     pub defocus_angle: f32,
     pub focus_distance: f32,
     pub image_width: u32,
@@ -35,6 +36,7 @@ impl Camera {
         lookfrom: Point3,
         lookat: Point3,
         cameraup: Vec3,
+        background: Color,
         defocus_angle: f32,
         focus_distance: f32,
     ) -> Self {
@@ -69,6 +71,7 @@ impl Camera {
             lookfrom,
             lookat,
             cameraup,
+            background,
             defocus_angle,
             focus_distance,
             samples_per_pixel,
@@ -142,13 +145,14 @@ impl Camera {
         }
 
         if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
+            let emitted = rec.mat.emitted(rec.u, rec.v, rec.p);
             if let Some((scattered, attenuation)) = rec.mat.scatter(r, &rec) {
-                return attenuation * self.get_ray_color(scattered, depth - 1, world);
+                emitted + attenuation * self.get_ray_color(scattered, depth - 1, world)
+            } else {
+                emitted
             }
-            return Color::ZERO;
+        } else {
+            self.background
         }
-
-        let a = 0.5 * (r.direction.normalize().y + 1.0);
-        (1.0 - a) * Color::new(1., 1., 1.) + a * Color::new(0.5, 0.7, 1.)
     }
 }
