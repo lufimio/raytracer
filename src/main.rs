@@ -429,7 +429,7 @@ fn main() {
         2 => setup_quads(),
         3 => setup_earth(),
         4 => setup_cornell_box(300, 2000),
-        5 => setup_spheres_and_boxes(800, 10000),
+        5 => setup_spheres_and_boxes(200, 100),
         _ => (),
     }
 }
